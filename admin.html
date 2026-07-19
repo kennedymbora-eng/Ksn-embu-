@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — KSN</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="dash-header">
+    <div>
+      <div class="brand" style="font-size:1.05rem;">KRYSTAL<span style="color:#F5F3EE">SUPPLY</span></div>
+      <div class="dash-shop">Admin</div>
+    </div>
+    <a href="#" id="logoutBtn" class="btn btn-ghost" style="padding:8px 16px;">Log out</a>
+  </div>
+
+  <div class="dash-body">
+    <div class="stat-row">
+      <div class="stat"><div class="label">Registered shops</div><div class="value" id="statShops">0</div></div>
+      <div class="stat"><div class="label">Pending orders</div><div class="value" id="statOrders">0</div></div>
+      <div class="stat"><div class="label">Distinct products to buy</div><div class="value" id="statProducts">0</div></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Combined purchase list</h2>
+        <button class="btn-sm amber" id="markPurchasedBtn">Mark all as purchased</button>
+      </div>
+      <table>
+        <thead><tr><th>Product</th><th>Total needed</th><th>From shops</th></tr></thead>
+        <tbody id="combinedBody">
+          <tr><td colspan="3" class="empty-state">No pending orders yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Pending orders by shop</h2></div>
+      <table>
+        <thead><tr><th>Shop</th><th>Items</th><th>Submitted</th></tr></thead>
+        <tbody id="ordersBody">
+          <tr><td colspan="3" class="empty-state">No pending orders yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Registered shops</h2></div>
+      <table>
+        <thead><tr><th>Shop</th><th>Code</th><th>Location</th><th>Phone</th></tr></thead>
+        <tbody id="shopsBody">
+          <tr><td colspan="4" class="empty-state">No shops registered yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script type="module">
+    import { watchAuthState, logout } from "./js/auth.js";
+    import { watchAllShops, watchPendingOrders, aggregateOrders, markOrdersPurchased } from "./js/admin.js";
+
+    let shopsById = {};
+    let currentPendingOrders = [];
+
+    watchAuthState(
+      () => {
+        // Any authenticated user reaches here; Firestore rules enforce that
+        // only an account listed in the "admins" collection can actually read
+        // shop/order data across the network. Non-admins will just see empty tables.
+        watchAllShops(renderShops);
+        watchPendingOrders(renderOrders);
+      },
+      () => { window.location.href = "login.html"; }
+    );
+
+    document.getElementById("logoutBtn").addEventListener("click", async (e) => {
+      e.preventDefault();
+      await logout();
+      window.location.href = "login.html";
+    });
+
+    function renderShops(shops) {
+      shopsById = Object.fromEntries(shops.map(s => [s.id, s]));
+      document.getElementById("statShops").textContent = shops.length;
+
+      const body = document.getElementById("shopsBody");
+      if (shops.length === 0) {
+        body.innerHTML = `<tr><td colspan="4" class="empty-state">No shops registered yet.</td></tr>`;
+        return;
+      }
+      body.innerHTML = shops.map(s => `
+        <tr>
+          <td>${escapeHtml(s.shopName)}</td>
+          <td>${escapeHtml(s.shopCode)}</td>
+          <td>${escapeHtml(s.location)}</td>
+          <td>${escapeHtml(s.phone)}</td>
+        </tr>
+      `).join("");
+
+      // Re-render orders in case shop names arrived after orders did
+      renderOrders(currentPendingOrders);
+    }
+
+    function renderOrders(orders) {
+      currentPendingOrders = orders;
+      document.getElementById("statOrders").textContent = orders.length;
+
+      const ordersBody = document.getElementById("ordersBody");
+      if (orders.length === 0) {
+        ordersBody.innerHTML = `<tr><td colspan="3" class="empty-state">No pending orders yet.</td></tr>`;
+      } else {
+        ordersBody.innerHTML = orders.map(o => {
+          const shop = shopsById[o.shopId];
+          const shopLabel = shop ? shop.shopName : o.shopId;
+          const itemsLabel = (o.items || []).map(i => `${i.name} × ${i.quantity}`).join(", ");
+          const when = o.createdAt?.toDate ? o.createdAt.toDate().toLocaleDateString() : "—";
+          return `<tr><td>${escapeHtml(shopLabel)}</td><td>${escapeHtml(itemsLabel)}</td><td>${when}</td></tr>`;
+        }).join("");
+      }
+
+      const combined = aggregateOrders(orders);
+      document.getElementById("statProducts").textContent = combined.length;
+
+      const combinedBody = document.getElementById("combinedBody");
+      if (combined.length === 0) {
+        combinedBody.innerHTML = `<tr><td colspan="3" class="empty-state">No pending orders yet.</td></tr>`;
+      } else {
+        combinedBody.innerHTML = combined.map(item => {
+          const shopNames = item.breakdown.map(b => {
+            const shop = shopsById[b.shopId];
+            return `${shop ? shop.shopName : b.shopId} (${b.quantity})`;
+          }).join(", ");
+          return `
+            <tr>
+              <td>${escapeHtml(item.name)}</td>
+              <td><strong>${item.total}</strong></td>
+              <td style="color:var(--slate); font-size:0.85rem;">${escapeHtml(shopNames)}</td>
+            </tr>
+          `;
+        }).join("");
+      }
+    }
+
+    document.getElementById("markPurchasedBtn").addEventListener("click", async () => {
+      if (currentPendingOrders.length === 0) return alert("No pending orders to mark.");
+      if (!confirm(`Mark all ${currentPendingOrders.length} pending order(s) as purchased?`)) return;
+      await markOrdersPurchased(currentPendingOrders.map(o => o.id));
+      alert("Orders marked as purchased.");
+    });
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str ?? "";
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>

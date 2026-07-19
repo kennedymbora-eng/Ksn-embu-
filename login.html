@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — KSN</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <nav class="nav">
+    <a href="index.html" class="brand">KRYSTAL<span>SUPPLY</span></a>
+    <div><a href="register.html" class="cta">Register Shop</a></div>
+  </nav>
+
+  <div class="form-wrap">
+    <h1>Log in</h1>
+    <p class="lede">Welcome back — pick up where you left off.</p>
+
+    <form id="loginForm">
+      <label for="email">Email</label>
+      <input type="email" id="email" required />
+
+      <label for="password">Password</label>
+      <input type="password" id="password" required />
+
+      <button type="submit" class="submit">Log in</button>
+      <div class="error-msg" id="errorMsg"></div>
+    </form>
+
+    <div class="form-footer">New to KSN? <a href="register.html">Register your shop</a></div>
+  </div>
+
+  <script type="module">
+    import { loginShop } from "./js/auth.js";
+
+    const form = document.getElementById("loginForm");
+    const errorMsg = document.getElementById("errorMsg");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      errorMsg.style.display = "none";
+      const submitBtn = form.querySelector("button");
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Logging in…";
+
+      try {
+        await loginShop(
+          document.getElementById("email").value.trim(),
+          document.getElementById("password").value
+        );
+        window.location.href = "dashboard.html";
+      } catch (err) {
+        errorMsg.textContent = err.message.replace("Firebase: ", "");
+        errorMsg.style.display = "block";
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Log in";
+      }
+    });
+  </script>
+</body>
+</html>
