@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Krystal Supply Network</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
+:root{
+  --navy:#0F1B2D; --navy-2:#16253C; --amber:#E8A33D; --amber-dim:#C98A2E;
+  --paper:#F5F3EE; --slate:#5B6B7F; --green:#3FA34D; --red:#D6453D; --line:rgba(245,243,238,.12);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Inter',sans-serif;background:var(--paper);color:var(--navy);-webkit-font-smoothing:antialiased}
+h1,h2,h3,.brand{font-family:'Space Grotesk',sans-serif;font-weight:700;letter-spacing:-.01em}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:20px 28px;background:var(--navy);color:var(--paper)}
+.nav .brand{font-size:1.15rem;color:var(--amber);cursor:pointer}
+.nav .brand span{color:var(--paper)}
+.nav a{color:var(--paper);text-decoration:none;margin-left:20px;font-size:.9rem;opacity:.85;cursor:pointer}
+.nav a.cta{background:var(--amber);color:var(--navy);padding:8px 16px;border-radius:6px;opacity:1;font-weight:600}
+.hero{background:var(--navy);color:var(--paper);padding:72px 28px 96px;position:relative;overflow:hidden}
+.hero-inner{max-width:720px;position:relative}
+.eyebrow{color:var(--amber);font-size:.8rem;text-transform:uppercase;letter-spacing:.14em;font-weight:600}
+.hero h1{font-size:2.4rem;line-height:1.12;margin:14px 0 18px}
+.hero p{font-size:1.05rem;color:#C7CFDA;max-width:520px}
+.hero .btn-row{margin-top:32px;display:flex;gap:12px;flex-wrap:wrap}
+.btn{display:inline-block;padding:12px 22px;border-radius:6px;font-weight:600;text-decoration:none;font-size:.95rem;border:1px solid transparent;cursor:pointer}
+.btn-primary{background:var(--amber);color:var(--navy)}
+.btn-ghost{background:transparent;color:var(--paper);border-color:rgba(245,243,238,.35)}
+.section{padding:64px 28px;max-width:1040px;margin:0 auto}
+.section h2{font-size:1.6rem;margin-bottom:8px}
+.section .lede{color:var(--slate);max-width:560px;margin-bottom:36px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+@media (max-width:780px){.grid-3{grid-template-columns:1fr}}
+.card{background:#fff;border:1px solid #E4E0D6;border-radius:10px;padding:22px}
+.card .num{font-family:'Space Grotesk',sans-serif;color:var(--amber-dim);font-weight:700;font-size:.85rem}
+.card h3{font-size:1.05rem;margin:8px 0 6px}
+.card p{color:var(--slate);font-size:.92rem;margin:0}
+.form-wrap{max-width:420px;margin:48px auto;background:#fff;border:1px solid #E4E0D6;border-radius:12px;padding:32px}
+.form-wrap h1{font-size:1.4rem;margin-bottom:4px}
+.form-wrap .lede{color:var(--slate);font-size:.9rem;margin-bottom:24px}
+label{display:block;font-size:.82rem;font-weight:600;margin:14px 0 6px;color:var(--navy)}
+input,select{width:100%;padding:10px 12px;border:1px solid #D8D3C6;border-radius:6px;font-size:.95rem;font-family:'Inter',sans-serif;background:var(--paper)}
+input:focus,select:focus{outline:none;border-color:var(--amber);background:#fff}
+button.submit{width:100%;margin-top:22px;padding:12px;background:var(--navy);color:var(--paper);border:none;border-radius:6px;font-weight:600;font-size:.95rem;cursor:pointer}
+button.submit:hover{background:var(--navy-2)}
+.error-msg{color:var(--red);font-size:.85rem;margin-top:12px;display:none}
+.form-footer{text-align:center;font-size:.88rem;margin-top:18px;color:var(--slate)}
+.form-footer a{color:var(--amber-dim);font-weight:600;text-decoration:none;cursor:pointer}
+.dash-header{display:flex;justify-content:space-between;align-items:center;padding:18px 28px;background:var(--navy);color:var(--paper)}
+.dash-shop{font-size:.85rem;color:#C7CFDA}
+.dash-body{max-width:1040px;margin:0 auto;padding:28px}
+.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px}
+@media (max-width:780px){.stat-row{grid-template-columns:1fr}}
+.stat{background:#fff;border:1px solid #E4E0D6;border-radius:10px;padding:18px}
+.stat .label{font-size:.78rem;color:var(--slate);text-transform:uppercase;letter-spacing:.06em}
+.stat .value{font-family:'Space Grotesk',sans-serif;font-size:1.8rem;font-weight:700;margin-top:4px}
+.stat.low .value{color:#B8781F}
+.stat.out .value{color:var(--red)}
+.panel{background:#fff;border:1px solid #E4E0D6;border-radius:10px;margin-bottom:24px}
+.panel-head{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #EEEAE0}
+.panel-head h2{font-size:1.05rem;margin:0}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th{text-align:left;padding:10px 20px;color:var(--slate);font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #EEEAE0}
+td{padding:12px 20px;border-bottom:1px solid #F2EFE7}
+tr:last-child td{border-bottom:none}
+.pill{display:inline-block;padding:3px 10px;border-radius:100px;font-size:.78rem;font-weight:600}
+.pill.ok{background:#E6F4E8;color:var(--green)}
+.pill.low{background:#FBF0DD;color:#B8781F}
+.pill.out{background:#FBE7E5;color:var(--red)}
+.btn-sm{padding:6px 12px;font-size:.82rem;border-radius:5px;border:1px solid #D8D3C6;background:#fff;cursor:pointer;margin-right:6px}
+.btn-sm.amber{background:var(--amber);border-color:var(--amber);color:var(--navy);font-weight:600}
+.add-form{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px 20px;background:var(--paper)}
+.add-form input{font-size:.85rem;padding:8px 10px}
+@media (max-width:780px){.add-form{grid-template-columns:1fr 1fr}}
+.empty-state{padding:40px 20px;text-align:center;color:var(--slate);font-size:.9rem}
+.view{display:none}
+.view.active{display:block}
+</style>
+</head>
+<body>
+
+<!-- ===== LANDING VIEW ===== -->
+<div id="view-landing" class="view active">
+  <nav class="nav">
+    <div class="brand" onclick="showView('landing')">KRYSTAL<span>SUPPLY</span></div>
+    <div>
+      <a onclick="showView('login')">Login</a>
+      <a onclick="showView('register')" class="cta">Register Shop</a>
+    </div>
+  </nav>
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="eyebrow">One order, every shop, one Nairobi run</div>
+      <h1>Stop restocking alone. Order together.</h1>
+      <p>KSN links Embu electronics shops into a single sourcing hub — track your stock, submit your weekly restock list, and get it combined with every other shop's order into one bulk buy from Nairobi.</p>
+      <div class="btn-row">
+        <a onclick="showView('register')" class="btn btn-primary">Register your shop</a>
+        <a onclick="showView('login')" class="btn btn-ghost">Log in</a>
+      </div>
+    </div>
+  </header>
+  <section class="section">
+    <h2>How it works</h2>
+    <p class="lede">Three steps, once a week.</p>
+    <div class="grid-3">
+      <div class="card"><div class="num">01</div><h3>Track your stock</h3><p>Log products, prices, and minimum stock levels. KSN flags what's running low automatically.</p></div>
+      <div class="card"><div class="num">02</div><h3>Build your restock list</h3><p>Add low-stock items to your restock cart through the week, then submit it once ready.</p></div>
+      <div class="card"><div class="num">03</div><h3>We combine and buy</h3><p>Every shop's order is merged into one bulk purchase from Nairobi — better prices, one delivery run.</p></div>
+    </div>
+  </section>
+</div>
+
+<!-- ===== REGISTER VIEW ===== -->
+<div id="view-register" class="view">
+  <nav class="nav">
+    <div class="brand" onclick="showView('landing')">KRYSTAL<span>SUPPLY</span></div>
+    <div><a onclick="showView('login')">Login</a></div>
+  </nav>
+  <div class="form-wrap">
+    <h1>Register your shop</h1>
+    <p class="lede">Takes about a minute. You'll get your shop code right after.</p>
+    <form id="registerForm">
+      <label>Shop name</label><input type="text" id="reg-shopName" required />
+      <label>Owner name</label><input type="text" id="reg-ownerName" required />
+      <label>Phone number</label><input type="tel" id="reg-phone" placeholder="07XX XXX XXX" required />
+      <label>Location</label><input type="text" id="reg-location" placeholder="e.g. Manyatta, Embu" required />
+      <label>Email</label><input type="email" id="reg-email" required />
+      <label>Password</label><input type="password" id="reg-password" minlength="6" required />
+      <button type="submit" class="submit">Create shop account</button>
+      <div class="error-msg" id="reg-error"></div>
+    </form>
+    <div class="form-footer">Already registered? <a onclick="showView('login')">Log in</a></div>
+  </div>
+</div>
+
+<!-- ===== LOGIN VIEW ===== -->
+<div id="view-login" class="view">
+  <nav class="nav">
+    <div class="brand" onclick="showView('landing')">KRYSTAL<span>SUPPLY</span></div>
+    <div><a onclick="showView('register')" class="cta">Register Shop</a></div>
+  </nav>
+  <div class="form-wrap">
+    <h1>Log in</h1>
+    <p class="lede">Welcome back — pick up where you left off.</p>
+    <form id="loginForm">
+      <label>Email</label><input type="email" id="login-email" required />
+      <label>Password</label><input type="password" id="login-password" required />
+      <button type="submit" class="submit">Log in</button>
+      <div class="error-msg" id="login-error"></div>
+    </form>
+    <div class="form-footer">New to KSN? <a onclick="showView('register')">Register your shop</a></div>
+  </div>
+</div>
+
+<!-- ===== SHOP DASHBOARD VIEW ===== -->
+<div id="view-dashboard" class="view">
+  <div class="dash-header">
+    <div>
+      <div class="brand" style="font-size:1.05rem;">KRYSTAL<span style="color:#F5F3EE">SUPPLY</span></div>
+      <div class="dash-shop" id="shopLabel">Loading…</div>
+    </div>
+    <a onclick="doLogout()" class="btn btn-ghost" style="padding:8px 16px;">Log out</a>
+  </div>
+  <div class="dash-body">
+    <div class="stat-row">
+      <div class="stat"><div class="label">Total products</div><div class="value" id="statTotal">0</div></div>
+      <div class="stat low"><div class="label">Low stock</div><div class="value" id="statLow">0</div></div>
+      <div class="stat out"><div class="label">Out of stock</div><div class="value" id="statOut">0</div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Inventory</h2></div>
+      <div class="add-form" style="grid-template-columns: 2fr 1fr 1fr auto;">
+        <select id="catalogueSelect"><option value="">Select a product to stock…</option></select>
+        <input type="number" id="pStock" placeholder="Current stock" />
+        <input type="number" id="pMinStock" placeholder="Minimum stock" />
+        <button class="btn-sm amber" id="addProductBtn">+ Add to inventory</button>
+      </div>
+      <div class="add-form" style="grid-template-columns: 2fr 1fr auto; background:#fff; border-top:1px solid #EEEAE0;">
+        <input type="text" id="invSearch" placeholder="Search your products…" />
+        <select id="invCategoryFilter"><option value="">All categories</option></select>
+        <label style="display:flex;align-items:center;gap:6px;margin:0;font-weight:500;font-size:.85rem;">
+          <input type="checkbox" id="invLowOnly" style="width:auto;" /> Low/out only
+        </label>
+      </div>
+      <table>
+        <thead><tr><th></th><th>Product</th><th>Category</th><th>Stock</th><th>Profit/unit</th><th>Status</th><th></th></tr></thead>
+        <tbody id="inventoryBody"><tr><td colspan="7" class="empty-state">No products yet — add one from the catalogue above.</td></tr></tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Restock list</h2><button class="btn-sm amber" id="submitOrderBtn">Submit order</button></div>
+      <table>
+        <thead><tr><th>Product</th><th>Quantity</th><th></th></tr></thead>
+        <tbody id="restockBody"><tr><td colspan="3" class="empty-state">Nothing added yet.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ADMIN DASHBOARD VIEW ===== -->
+<div id="view-admin" class="view">
+  <div class="dash-header">
+    <div>
+      <div class="brand" style="font-size:1.05rem;">KRYSTAL<span style="color:#F5F3EE">SUPPLY</span></div>
+      <div class="dash-shop">Admin</div>
+    </div>
+    <a onclick="doLogout()" class="btn btn-ghost" style="padding:8px 16px;">Log out</a>
+  </div>
+  <div class="dash-body">
+    <div class="stat-row">
+      <div class="stat"><div class="label">Registered shops</div><div class="value" id="statShops">0</div></div>
+      <div class="stat"><div class="label">Pending orders</div><div class="value" id="statOrders">0</div></div>
+      <div class="stat"><div class="label">Distinct products to buy</div><div class="value" id="statProducts">0</div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Product catalogue</h2></div>
+      <div class="add-form" style="grid-template-columns: 1.5fr 1fr 1fr 1fr 1.5fr auto;">
+        <input type="text" id="catName" placeholder="Product name" />
+        <input type="text" id="catCategory" placeholder="Category" />
+        <input type="number" id="catBuyPrice" placeholder="Buy price (KES)" />
+        <input type="number" id="catSellPrice" placeholder="Recommended sell (KES)" />
+        <input type="text" id="catImageUrl" placeholder="Image URL (optional)" />
+        <button class="btn-sm amber" id="addCatalogueBtn">+ Add product</button>
+      </div>
+      <div class="add-form" style="grid-template-columns: 2fr 1fr; background:#fff; border-top:1px solid #EEEAE0;">
+        <input type="text" id="catSearch" placeholder="Search catalogue…" />
+        <select id="catCategoryFilter"><option value="">All categories</option></select>
+      </div>
+      <table>
+        <thead><tr><th></th><th>Product</th><th>Category</th><th>Buy</th><th>Sell</th><th>Est. profit</th><th></th></tr></thead>
+        <tbody id="catalogueBody"><tr><td colspan="7" class="empty-state">No products in the catalogue yet.</td></tr></tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Combined purchase list</h2>
+        <button class="btn-sm amber" id="markPurchasedBtn">Mark all as purchased</button>
+      </div>
+      <table>
+        <thead><tr><th>Product</th><th>Total needed</th><th>From shops</th></tr></thead>
+        <tbody id="combinedBody"><tr><td colspan="3" class="empty-state">No pending orders yet.</td></tr></tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Pending orders by shop</h2></div>
+      <table>
+        <thead><tr><th>Shop</th><th>Items</th><th>Submitted</th></tr></thead>
+        <tbody id="ordersBody"><tr><td colspan="3" class="empty-state">No pending orders yet.</td></tr></tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Registered shops</h2></div>
+      <table>
+        <thead><tr><th>Shop</th><th>Code</th><th>Location</th><th>Phone</th></tr></thead>
+        <tbody id="shopsBody"><tr><td colspan="4" class="empty-state">No shops registered yet.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore, doc, setDoc, getDoc, addDoc, deleteDoc, updateDoc, collection,
+  onSnapshot, query, where, orderBy, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// ---- Firebase config (ksn-embu project) ----
+const firebaseConfig = {
+  apiKey: "AIzaSyALZNTbGdVDSOEEca7IXQbOkNqHxhJ98b8",
+  authDomain: "ksn-embu.firebaseapp.com",
+  projectId: "ksn-embu",
+  storageBucket: "ksn-embu.firebasestorage.app",
+  messagingSenderId: "354031009947",
+  appId: "1:354031009947:web:beb173f741f02e2ad6063e"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// ---- View switching ----
+window.showView = function(name) {
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+  document.getElementById("view-" + name).classList.add("active");
+};
+
+// ---- Helpers ----
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str ?? "";
+  return div.innerHTML;
+}
+function generateShopCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return `KSN-${code}`;
+}
+function stockStatus(stock, minStock) {
+  if (stock <= 0) return "out";
+  if (stock <= minStock) return "low";
+  return "ok";
+}
+
+// ---- Seed sample products for a brand-new shop, so the dashboard isn't empty on first login ----
+async function seedSampleProducts(shopId) {
+  const sampleProducts = [
+    { name: "Type C Charger (Fast Charge)", category: "Chargers", stock: 24, minStock: 10 },
+    { name: "Samsung A06 Screen", category: "Screens", stock: 3, minStock: 5 },
+    { name: "Solder Wire (60/40)", category: "Repair Tools", stock: 0, minStock: 4 },
+    { name: "Bluetooth Earphones", category: "Accessories", stock: 15, minStock: 6 },
+    { name: "Phone Battery (Universal)", category: "Batteries", stock: 8, minStock: 8 }
+  ];
+  const invRef = collection(db, "shops", shopId, "inventory");
+  await Promise.all(sampleProducts.map(p => addDoc(invRef, { ...p, brand: "", buyPrice: 0, sellPrice: 0, barcode: "", supplier: "", createdAt: serverTimestamp() })));
+}
+
+// ---- Auth: register ----
+document.getElementById("registerForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const errorMsg = document.getElementById("reg-error");
+  errorMsg.style.display = "none";
+  const btn = e.target.querySelector("button");
+  btn.disabled = true; btn.textContent = "Creating account…";
+
+  try {
+    const email = document.getElementById("reg-email").value.trim();
+    const password = document.getElementById("reg-password").value;
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    const shopId = cred.user.uid;
+    const shopCode = generateShopCode();
+
+    await setDoc(doc(db, "shops", shopId), {
+      shopName: document.getElementById("reg-shopName").value.trim(),
+      ownerName: document.getElementById("reg-ownerName").value.trim(),
+      phone: document.getElementById("reg-phone").value.trim(),
+      email,
+      location: document.getElementById("reg-location").value.trim(),
+      shopCode,
+      status: "active",
+      createdAt: serverTimestamp()
+    });
+
+    await seedSampleProducts(shopId);
+    alert(`Shop registered! Your shop code is ${shopCode}`);
+    showView("dashboard");
+  } catch (err) {
+    errorMsg.textContent = err.message.replace("Firebase: ", "");
+    errorMsg.style.display = "block";
+  } finally {
+    btn.disabled = false; btn.textContent = "Create shop account";
+  }
+});
+
+// ---- Auth: login ----
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const errorMsg = document.getElementById("login-error");
+  errorMsg.style.display = "none";
+  const btn = e.target.querySelector("button");
+  btn.disabled = true; btn.textContent = "Logging in…";
+
+  try {
+    await signInWithEmailAndPassword(
+      auth,
+      document.getElementById("login-email").value.trim(),
+      document.getElementById("login-password").value
+    );
+    showView("dashboard");
+  } catch (err) {
+    errorMsg.textContent = err.message.replace("Firebase: ", "");
+    errorMsg.style.display = "block";
+  } finally {
+    btn.disabled = false; btn.textContent = "Log in";
+  }
+});
+
+window.doLogout = async function() {
+  await signOut(auth);
+  showView("landing");
+};
+
+// ---- Dashboard state ----
+let currentShopId = null;
+let currentProducts = [];
+let currentRestockItems = [];
+let unsubInventory = null;
+let unsubRestock = null;
+
+// ---- Admin state ----
+let shopsById = {};
+let currentPendingOrders = [];
+let unsubShops = null;
+let unsubOrders = null;
+
+// ---- Catalogue state (shared across shop + admin views) ----
+let currentCatalogue = [];
+let unsubCatalogue = null;
+
+onAuthStateChanged(auth, async (user) => {
+  if (unsubInventory) { unsubInventory(); unsubInventory = null; }
+  if (unsubRestock) { unsubRestock(); unsubRestock = null; }
+  if (unsubShops) { unsubShops(); unsubShops = null; }
+  if (unsubOrders) { unsubOrders(); unsubOrders = null; }
+  if (unsubCatalogue) { unsubCatalogue(); unsubCatalogue = null; }
+
+  if (user) {
+    unsubCatalogue = onSnapshot(collection(db, "catalogue"), (snap) => {
+      currentCatalogue = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.name.localeCompare(b.name));
+      renderCatalogueSelect();
+      renderCatalogueAdmin();
+    });
+
+    const adminSnap = await getDoc(doc(db, "admins", user.uid));
+    if (adminSnap.exists()) {
+      unsubShops = onSnapshot(collection(db, "shops"), (snap) => {
+        shopsById = Object.fromEntries(snap.docs.map(d => [d.id, { id: d.id, ...d.data() }]));
+        renderShops();
+        renderOrders();
+      });
+      const ordersQuery = query(collection(db, "orders"), where("status", "==", "pending"));
+      unsubOrders = onSnapshot(ordersQuery, (snap) => {
+        currentPendingOrders = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0));
+        renderOrders();
+      });
+      showView("admin");
+      return;
+    }
+
+    currentShopId = user.uid;
+    const shopSnap = await getDoc(doc(db, "shops", currentShopId));
+    const shop = shopSnap.data();
+    document.getElementById("shopLabel").textContent = shop ? `${shop.shopName} · ${shop.shopCode}` : user.email;
+
+    const invQuery = query(collection(db, "shops", currentShopId, "inventory"), orderBy("name"));
+    unsubInventory = onSnapshot(invQuery, (snap) => {
+      currentProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderInventory();
+    });
+
+    unsubRestock = onSnapshot(collection(db, "shops", currentShopId, "restockList"), (snap) => {
+      currentRestockItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderRestockList();
+    });
+
+    showView("dashboard");
+  } else {
+    currentShopId = null;
+    if (!document.getElementById("view-register").classList.contains("active")) {
+      showView("landing");
+    }
+  }
+});
+
+function renderCatalogueSelect() {
+  const select = document.getElementById("catalogueSelect");
+  const current = select.value;
+  select.innerHTML = `<option value="">Select a product to stock…</option>` +
+    currentCatalogue.map(c => `<option value="${c.id}">${escapeHtml(c.name)}${c.category ? " — " + escapeHtml(c.category) : ""}</option>`).join("");
+  if (currentCatalogue.some(c => c.id === current)) select.value = current;
+}
+
+function getInventoryFilters() {
+  return {
+    search: (document.getElementById("invSearch")?.value || "").trim().toLowerCase(),
+    category: document.getElementById("invCategoryFilter")?.value || "",
+    lowOnly: document.getElementById("invLowOnly")?.checked || false
+  };
+}
+
+function renderInventory() {
+  const body = document.getElementById("inventoryBody");
+  const low = currentProducts.filter(p => stockStatus(p.stock, p.minStock) === "low").length;
+  const out = currentProducts.filter(p => stockStatus(p.stock, p.minStock) === "out").length;
+  document.getElementById("statTotal").textContent = currentProducts.length;
+  document.getElementById("statLow").textContent = low;
+  document.getElementById("statOut").textContent = out;
+
+  // Populate category filter dropdown from this shop's own products
+  const catFilter = document.getElementById("invCategoryFilter");
+  const cats = [...new Set(currentProducts.map(p => p.category).filter(Boolean))].sort();
+  const prevCat = catFilter.value;
+  catFilter.innerHTML = `<option value="">All categories</option>` + cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+  if (cats.includes(prevCat)) catFilter.value = prevCat;
+
+  const { search, category, lowOnly } = getInventoryFilters();
+  const filtered = currentProducts.filter(p => {
+    if (search && !p.name.toLowerCase().includes(search)) return false;
+    if (category && p.category !== category) return false;
+    if (lowOnly && stockStatus(p.stock, p.minStock) === "ok") return false;
+    return true;
+  });
+
+  if (currentProducts.length === 0) {
+    body.innerHTML = `<tr><td colspan="7" class="empty-state">No products yet — add one from the catalogue above.</td></tr>`;
+    return;
+  }
+  if (filtered.length === 0) {
+    body.innerHTML = `<tr><td colspan="7" class="empty-state">No products match your search/filter.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = filtered.map(p => {
+    const status = stockStatus(p.stock, p.minStock);
+    const pillClass = status === "out" ? "out" : status === "low" ? "low" : "ok";
+    const pillText = status === "out" ? "Out of stock" : status === "low" ? "Low stock" : "In stock";
+    const profit = (Number(p.sellPrice) || 0) - (Number(p.buyPrice) || 0);
+    const thumb = p.imageUrl
+      ? `<img src="${escapeHtml(p.imageUrl)}" style="width:36px;height:36px;object-fit:cover;border-radius:6px;" onerror="this.style.display='none'" />`
+      : `<div style="width:36px;height:36px;border-radius:6px;background:#EEEAE0;"></div>`;
+    return `<tr>
+      <td>${thumb}</td>
+      <td>${escapeHtml(p.name)}</td>
+      <td>${escapeHtml(p.category || "—")}</td>
+      <td>${p.stock}</td>
+      <td>${profit ? "KES " + profit : "—"}</td>
+      <td><span class="pill ${pillClass}">${pillText}</span></td>
+      <td>
+        <button class="btn-sm" data-edit="${p.id}">Edit</button>
+        <button class="btn-sm" data-restock="${p.id}">+ Restock</button>
+        <button class="btn-sm" data-delete="${p.id}">Delete</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  body.querySelectorAll("[data-edit]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const product = currentProducts.find(p => p.id === btn.dataset.edit);
+      const newStock = prompt(`Update stock for ${product.name}`, product.stock);
+      if (newStock === null) return;
+      const newMin = prompt(`Update minimum stock for ${product.name}`, product.minStock);
+      if (newMin === null) return;
+      await setDoc(doc(db, "shops", currentShopId, "inventory", product.id),
+        { stock: Number(newStock) || 0, minStock: Number(newMin) || 0 }, { merge: true });
+    });
+  });
+  body.querySelectorAll("[data-restock]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const product = currentProducts.find(p => p.id === btn.dataset.restock);
+      const qty = prompt(`How many ${product.name} to restock?`, "10");
+      if (qty) {
+        await addDoc(collection(db, "shops", currentShopId, "restockList"), {
+          productId: product.id, name: product.name, quantity: Number(qty) || 1, addedAt: serverTimestamp()
+        });
+      }
+    });
+  });
+  body.querySelectorAll("[data-delete]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      if (confirm("Delete this product?")) await deleteDoc(doc(db, "shops", currentShopId, "inventory", btn.dataset.delete));
+    });
+  });
+}
+
+document.getElementById("invSearch")?.addEventListener("input", renderInventory);
+document.getElementById("invCategoryFilter")?.addEventListener("change", renderInventory);
+document.getElementById("invLowOnly")?.addEventListener("change", renderInventory);
+
+function renderRestockList() {
+  const body = document.getElementById("restockBody");
+  if (currentRestockItems.length === 0) {
+    body.innerHTML = `<tr><td colspan="3" class="empty-state">Nothing added yet.</td></tr>`;
+    return;
+  }
+  body.innerHTML = currentRestockItems.map(i => `<tr>
+    <td>${escapeHtml(i.name)}</td><td>${i.quantity}</td>
+    <td><button class="btn-sm" data-remove="${i.id}">Remove</button></td>
+  </tr>`).join("");
+  body.querySelectorAll("[data-remove]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      await deleteDoc(doc(db, "shops", currentShopId, "restockList", btn.dataset.remove));
+    });
+  });
+}
+
+document.getElementById("addProductBtn").addEventListener("click", async () => {
+  const catalogueId = document.getElementById("catalogueSelect").value;
+  const stock = document.getElementById("pStock").value;
+  const minStock = document.getElementById("pMinStock").value;
+  if (!catalogueId) return alert("Please select a product from the catalogue.");
+
+  const product = currentCatalogue.find(c => c.id === catalogueId);
+  if (!product) return alert("That product could not be found — try refreshing.");
+
+  // Prevent adding the same catalogue product twice into this shop's inventory
+  if (currentProducts.some(p => p.catalogueId === catalogueId)) {
+    return alert(`${product.name} is already in your inventory — use Edit to update its stock instead.`);
+  }
+
+  await addDoc(collection(db, "shops", currentShopId, "inventory"), {
+    catalogueId,
+    name: product.name,
+    category: product.category || "",
+    buyPrice: Number(product.buyPrice) || 0,
+    sellPrice: Number(product.sellPrice) || 0,
+    imageUrl: product.imageUrl || "",
+    stock: Number(stock) || 0, minStock: Number(minStock) || 0,
+    barcode: "", supplier: "", createdAt: serverTimestamp()
+  });
+  document.getElementById("catalogueSelect").value = "";
+  document.getElementById("pStock").value = "";
+  document.getElementById("pMinStock").value = "";
+});
+
+document.getElementById("submitOrderBtn").addEventListener("click", async () => {
+  if (currentRestockItems.length === 0) return alert("Your restock list is empty.");
+  if (!confirm(`Submit order for ${currentRestockItems.length} item(s)?`)) return;
+
+  await addDoc(collection(db, "orders"), {
+    shopId: currentShopId,
+    items: currentRestockItems.map(i => ({ productId: i.productId, name: i.name, quantity: i.quantity })),
+    status: "pending",
+    submittedForAggregation: true,
+    createdAt: serverTimestamp()
+  });
+  await Promise.all(currentRestockItems.map(i => deleteDoc(doc(db, "shops", currentShopId, "restockList", i.id))));
+  alert("Order submitted!");
+});
+
+// ---- Admin rendering ----
+function renderShops() {
+  const shops = Object.values(shopsById);
+  document.getElementById("statShops").textContent = shops.length;
+  const body = document.getElementById("shopsBody");
+  if (shops.length === 0) {
+    body.innerHTML = `<tr><td colspan="4" class="empty-state">No shops registered yet.</td></tr>`;
+    return;
+  }
+  body.innerHTML = shops.map(s => `<tr>
+    <td>${escapeHtml(s.shopName)}</td><td>${escapeHtml(s.shopCode)}</td>
+    <td>${escapeHtml(s.location)}</td><td>${escapeHtml(s.phone)}</td>
+  </tr>`).join("");
+}
+
+function aggregateOrders(orders) {
+  const combined = {};
+  for (const order of orders) {
+    for (const item of order.items || []) {
+      const key = item.name.trim().toLowerCase();
+      if (!combined[key]) combined[key] = { name: item.name, total: 0, breakdown: [] };
+      combined[key].total += Number(item.quantity) || 0;
+      combined[key].breakdown.push({ shopId: order.shopId, quantity: item.quantity });
+    }
+  }
+  return Object.values(combined).sort((a, b) => b.total - a.total);
+}
+
+function renderOrders() {
+  const orders = currentPendingOrders;
+  document.getElementById("statOrders").textContent = orders.length;
+
+  const ordersBody = document.getElementById("ordersBody");
+  if (orders.length === 0) {
+    ordersBody.innerHTML = `<tr><td colspan="3" class="empty-state">No pending orders yet.</td></tr>`;
+  } else {
+    ordersBody.innerHTML = orders.map(o => {
+      const shop = shopsById[o.shopId];
+      const shopLabel = shop ? shop.shopName : o.shopId;
+      const itemsLabel = (o.items || []).map(i => `${i.name} × ${i.quantity}`).join(", ");
+      const when = o.createdAt?.toDate ? o.createdAt.toDate().toLocaleDateString() : "—";
+      return `<tr><td>${escapeHtml(shopLabel)}</td><td>${escapeHtml(itemsLabel)}</td><td>${when}</td></tr>`;
+    }).join("");
+  }
+
+  const combined = aggregateOrders(orders);
+  document.getElementById("statProducts").textContent = combined.length;
+
+  const combinedBody = document.getElementById("combinedBody");
+  if (combined.length === 0) {
+    combinedBody.innerHTML = `<tr><td colspan="3" class="empty-state">No pending orders yet.</td></tr>`;
+  } else {
+    combinedBody.innerHTML = combined.map(item => {
+      const shopNames = item.breakdown.map(b => {
+        const shop = shopsById[b.shopId];
+        return `${shop ? shop.shopName : b.shopId} (${b.quantity})`;
+      }).join(", ");
+      return `<tr>
+        <td>${escapeHtml(item.name)}</td>
+        <td><strong>${item.total}</strong></td>
+        <td style="color:var(--slate); font-size:0.85rem;">${escapeHtml(shopNames)}</td>
+      </tr>`;
+    }).join("");
+  }
+}
+
+document.getElementById("markPurchasedBtn").addEventListener("click", async () => {
+  if (currentPendingOrders.length === 0) return alert("No pending orders to mark.");
+  if (!confirm(`Mark all ${currentPendingOrders.length} pending order(s) as purchased?`)) return;
+  await Promise.all(currentPendingOrders.map(o => updateDoc(doc(db, "orders", o.id), { status: "purchased" })));
+  alert("Orders marked as purchased.");
+});
+
+// ---- Product catalogue (admin) ----
+function renderCatalogueAdmin() {
+  const body = document.getElementById("catalogueBody");
+  const catFilter = document.getElementById("catCategoryFilter");
+  if (!body || !catFilter) return; // not on admin view
+
+  const cats = [...new Set(currentCatalogue.map(c => c.category).filter(Boolean))].sort();
+  const prevCat = catFilter.value;
+  catFilter.innerHTML = `<option value="">All categories</option>` + cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+  if (cats.includes(prevCat)) catFilter.value = prevCat;
+
+  const search = (document.getElementById("catSearch")?.value || "").trim().toLowerCase();
+  const category = catFilter.value;
+  const filtered = currentCatalogue.filter(c => {
+    if (search && !c.name.toLowerCase().includes(search)) return false;
+    if (category && c.category !== category) return false;
+    return true;
+  });
+
+  if (currentCatalogue.length === 0) {
+    body.innerHTML = `<tr><td colspan="7" class="empty-state">No products in the catalogue yet.</td></tr>`;
+    return;
+  }
+  if (filtered.length === 0) {
+    body.innerHTML = `<tr><td colspan="7" class="empty-state">No products match your search/filter.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = filtered.map(c => {
+    const profit = (Number(c.sellPrice) || 0) - (Number(c.buyPrice) || 0);
+    const thumb = c.imageUrl
+      ? `<img src="${escapeHtml(c.imageUrl)}" style="width:36px;height:36px;object-fit:cover;border-radius:6px;" onerror="this.style.display='none'" />`
+      : `<div style="width:36px;height:36px;border-radius:6px;background:#EEEAE0;"></div>`;
+    return `<tr>
+      <td>${thumb}</td>
+      <td>${escapeHtml(c.name)}</td>
+      <td>${escapeHtml(c.category || "—")}</td>
+      <td>${c.buyPrice ? "KES " + c.buyPrice : "—"}</td>
+      <td>${c.sellPrice ? "KES " + c.sellPrice : "—"}</td>
+      <td>${profit ? "KES " + profit : "—"}</td>
+      <td>
+        <button class="btn-sm" data-catedit="${c.id}">Edit</button>
+        <button class="btn-sm" data-catdelete="${c.id}">Delete</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  body.querySelectorAll("[data-catedit]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const p = currentCatalogue.find(c => c.id === btn.dataset.catedit);
+      const name = prompt("Product name", p.name); if (name === null) return;
+      const category = prompt("Category", p.category || ""); if (category === null) return;
+      const buyPrice = prompt("Buy price (KES)", p.buyPrice || 0); if (buyPrice === null) return;
+      const sellPrice = prompt("Recommended sell price (KES)", p.sellPrice || 0); if (sellPrice === null) return;
+      const imageUrl = prompt("Image URL (optional)", p.imageUrl || ""); if (imageUrl === null) return;
+      await setDoc(doc(db, "catalogue", p.id), {
+        name: name.trim(), category: category.trim(),
+        buyPrice: Number(buyPrice) || 0, sellPrice: Number(sellPrice) || 0,
+        imageUrl: imageUrl.trim()
+      }, { merge: true });
+    });
+  });
+  body.querySelectorAll("[data-catdelete]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      if (confirm("Remove this product from the catalogue? Shops that already stock it keep their existing inventory entries.")) {
+        await deleteDoc(doc(db, "catalogue", btn.dataset.catdelete));
+      }
+    });
+  });
+}
+
+document.getElementById("addCatalogueBtn")?.addEventListener("click", async () => {
+  const name = document.getElementById("catName").value.trim();
+  const category = document.getElementById("catCategory").value.trim();
+  const buyPrice = document.getElementById("catBuyPrice").value;
+  const sellPrice = document.getElementById("catSellPrice").value;
+  const imageUrl = document.getElementById("catImageUrl").value.trim();
+  if (!name) return alert("Product name is required.");
+
+  await addDoc(collection(db, "catalogue"), {
+    name, category,
+    buyPrice: Number(buyPrice) || 0, sellPrice: Number(sellPrice) || 0,
+    imageUrl, createdAt: serverTimestamp()
+  });
+  document.getElementById("catName").value = "";
+  document.getElementById("catCategory").value = "";
+  document.getElementById("catBuyPrice").value = "";
+  document.getElementById("catSellPrice").value = "";
+  document.getElementById("catImageUrl").value = "";
+});
+
+document.getElementById("catSearch")?.addEventListener("input", renderCatalogueAdmin);
+document.getElementById("catCategoryFilter")?.addEventListener("change", renderCatalogueAdmin);
+</script>
+</body>
+</html>
