@@ -169,6 +169,14 @@ tr:last-child td{border-bottom:none}
     <a onclick="doLogout()" class="btn btn-ghost" style="padding:8px 16px;">Log out</a>
   </div>
   <div class="dash-body">
+    <div id="deadlineBanner" style="display:none;padding:14px 18px;border-radius:10px;margin-bottom:20px;font-size:.9rem;font-weight:600;"></div>
+    <div class="panel" id="notifPanel" style="display:none;">
+      <div class="panel-head">
+        <h2>Notifications <span id="notifUnreadBadge" style="display:none;background:var(--red);color:#fff;border-radius:100px;padding:1px 8px;font-size:.72rem;margin-left:6px;">0</span></h2>
+        <button class="btn-sm" id="markAllReadBtn">Mark all read</button>
+      </div>
+      <table><tbody id="notifBody"></tbody></table>
+    </div>
     <div class="stat-row">
       <div class="stat"><div class="label">Total products</div><div class="value" id="statTotal">0</div></div>
       <div class="stat low"><div class="label">Low stock</div><div class="value" id="statLow">0</div></div>
@@ -196,6 +204,16 @@ tr:last-child td{border-bottom:none}
     </div>
     <div class="panel">
       <div class="panel-head"><h2>Restock list</h2><button class="btn-sm amber" id="submitOrderBtn">Submit order</button></div>
+      <div class="add-form" style="grid-template-columns: 1fr; background:#fff; border-bottom:1px solid #EEEAE0;">
+        <div>
+          <label style="margin:0 0 8px;">Delivery option</label>
+          <select id="deliveryOption">
+            <option value="pickup">Pickup (KES 0)</option>
+            <option value="embuTown">Embu town delivery</option>
+            <option value="outsideEmbu">Outside Embu delivery</option>
+          </select>
+        </div>
+      </div>
       <table>
         <thead><tr><th>Product</th><th>Quantity</th><th></th></tr></thead>
         <tbody id="restockBody"><tr><td colspan="3" class="empty-state">Nothing added yet.</td></tr></tbody>
@@ -204,8 +222,8 @@ tr:last-child td{border-bottom:none}
     <div class="panel">
       <div class="panel-head"><h2>My orders</h2></div>
       <table>
-        <thead><tr><th>Items</th><th>Status</th><th>Submitted</th><th></th></tr></thead>
-        <tbody id="myOrdersBody"><tr><td colspan="4" class="empty-state">No orders submitted yet.</td></tr></tbody>
+        <thead><tr><th>Items</th><th>Delivery</th><th>Status</th><th>Submitted</th><th></th></tr></thead>
+        <tbody id="myOrdersBody"><tr><td colspan="5" class="empty-state">No orders submitted yet.</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -246,10 +264,19 @@ tr:last-child td{border-bottom:none}
       </table>
     </div>
     <div class="panel">
+      <div class="panel-head"><h2>Delivery charges</h2></div>
+      <div class="add-form" style="grid-template-columns: 1fr 1fr 1fr auto;">
+        <input type="number" id="chargeEmbuTown" placeholder="Embu town (KES)" />
+        <input type="number" id="chargeOutsideEmbu" placeholder="Outside Embu (KES)" />
+        <div style="display:flex;align-items:center;color:var(--slate);font-size:.85rem;">Pickup is always free</div>
+        <button class="btn-sm amber" id="saveDeliveryChargesBtn">Save</button>
+      </div>
+    </div>
+    <div class="panel">
       <div class="panel-head"><h2>Orders awaiting approval</h2></div>
       <table>
-        <thead><tr><th>Shop</th><th>Items</th><th>Submitted</th><th></th></tr></thead>
-        <tbody id="awaitingBody"><tr><td colspan="4" class="empty-state">No orders awaiting approval.</td></tr></tbody>
+        <thead><tr><th>Shop</th><th>Items</th><th>Delivery</th><th>Submitted</th><th></th></tr></thead>
+        <tbody id="awaitingBody"><tr><td colspan="5" class="empty-state">No orders awaiting approval.</td></tr></tbody>
       </table>
     </div>
     <div class="panel">
@@ -412,6 +439,12 @@ let currentProducts = [];
 let currentRestockItems = [];
 let currentMyOrders = [];
 let currentShop = null;
+let currentNotifications = [];
+let unsubNotifs = null;
+let currentDeliveryCharges = { embuTown: 0, outsideEmbu: 0 };
+let unsubDeliveryCharges = null;
+
+const DELIVERY_LABELS = { pickup: "Pickup", embuTown: "Embu town delivery", outsideEmbu: "Outside Embu delivery" };
 let unsubInventory = null;
 let unsubRestock = null;
 let unsubMyOrders = null;
@@ -439,12 +472,23 @@ onAuthStateChanged(auth, async (user) => {
   if (unsubOrders) { unsubOrders(); unsubOrders = null; }
   if (unsubCatalogue) { unsubCatalogue(); unsubCatalogue = null; }
   if (unsubMyOrders) { unsubMyOrders(); unsubMyOrders = null; }
+  if (unsubNotifs) { unsubNotifs(); unsubNotifs = null; }
+  if (unsubDeliveryCharges) { unsubDeliveryCharges(); unsubDeliveryCharges = null; }
 
   if (user) {
     unsubCatalogue = onSnapshot(collection(db, "catalogue"), (snap) => {
       currentCatalogue = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.name.localeCompare(b.name));
       renderCatalogueSelect();
       renderCatalogueAdmin();
+    });
+
+    unsubDeliveryCharges = onSnapshot(doc(db, "settings", "deliveryCharges"), (snap) => {
+      const data = snap.data() || {};
+      currentDeliveryCharges = { embuTown: Number(data.embuTown) || 0, outsideEmbu: Number(data.outsideEmbu) || 0 };
+      const embuInput = document.getElementById("chargeEmbuTown");
+      const outsideInput = document.getElementById("chargeOutsideEmbu");
+      if (embuInput && document.activeElement !== embuInput) embuInput.value = currentDeliveryCharges.embuTown || "";
+      if (outsideInput && document.activeElement !== outsideInput) outsideInput.value = currentDeliveryCharges.outsideEmbu || "";
     });
 
     const adminSnap = await getDoc(doc(db, "admins", user.uid));
@@ -488,6 +532,15 @@ onAuthStateChanged(auth, async (user) => {
       renderMyOrders();
     });
 
+    const notifQuery = query(collection(db, "notifications"), where("shopId", "==", currentShopId));
+    unsubNotifs = onSnapshot(notifQuery, (snap) => {
+      currentNotifications = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+      renderNotifications();
+    });
+
+    renderDeadlineBanner();
     showView("dashboard");
   } else {
     currentShopId = null;
@@ -661,9 +714,14 @@ document.getElementById("submitOrderBtn").addEventListener("click", async () => 
     };
   });
 
+  const deliveryOption = document.getElementById("deliveryOption").value;
+  const deliveryCharge = deliveryOption === "pickup" ? 0 : (currentDeliveryCharges[deliveryOption] || 0);
+
   await addDoc(collection(db, "orders"), {
     shopId: currentShopId,
     items: itemsWithPrices,
+    deliveryOption,
+    deliveryCharge,
     status: "submitted",
     createdAt: serverTimestamp()
   });
@@ -671,7 +729,81 @@ document.getElementById("submitOrderBtn").addEventListener("click", async () => 
   alert("Order submitted!");
 });
 
-function renderMyOrders() {
+function renderNotifications() {
+  const panel = document.getElementById("notifPanel");
+  const body = document.getElementById("notifBody");
+  const badge = document.getElementById("notifUnreadBadge");
+  if (!panel || !body) return;
+
+  if (currentNotifications.length === 0) {
+    panel.style.display = "none";
+    return;
+  }
+  panel.style.display = "block";
+
+  const unreadCount = currentNotifications.filter(n => !n.read).length;
+  if (unreadCount > 0) {
+    badge.style.display = "inline-block";
+    badge.textContent = unreadCount;
+  } else {
+    badge.style.display = "none";
+  }
+
+  body.innerHTML = currentNotifications.slice(0, 10).map(n => {
+    const when = n.createdAt?.toDate ? n.createdAt.toDate().toLocaleDateString() : "—";
+    return `<tr style="${n.read ? "" : "font-weight:600;"}">
+      <td style="width:8px;">${n.read ? "" : "🔵"}</td>
+      <td>${escapeHtml(n.message)}</td>
+      <td style="color:var(--slate);font-size:.8rem;white-space:nowrap;">${when}</td>
+    </tr>`;
+  }).join("");
+}
+
+document.getElementById("saveDeliveryChargesBtn")?.addEventListener("click", async () => {
+  const embuTown = Number(document.getElementById("chargeEmbuTown").value) || 0;
+  const outsideEmbu = Number(document.getElementById("chargeOutsideEmbu").value) || 0;
+  await setDoc(doc(db, "settings", "deliveryCharges"), { embuTown, outsideEmbu }, { merge: true });
+  alert("Delivery charges saved.");
+});
+
+document.getElementById("markAllReadBtn")?.addEventListener("click", async () => {
+  const unread = currentNotifications.filter(n => !n.read);
+  if (unread.length === 0) return;
+  await Promise.all(unread.map(n => updateDoc(doc(db, "notifications", n.id), { read: true })));
+});
+
+async function notifyShop(shopId, message, type) {
+  await addDoc(collection(db, "notifications"), { shopId, message, type, read: false, createdAt: serverTimestamp() });
+}
+
+async function notifyAllShops(message, type) {
+  const shopIds = Object.keys(shopsById);
+  await Promise.all(shopIds.map(shopId => notifyShop(shopId, message, type)));
+}
+
+// ---- Weekly order deadline: orders close every Wednesday at 6 PM (local time) ----
+function renderDeadlineBanner() {
+  const banner = document.getElementById("deadlineBanner");
+  if (!banner) return;
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun,1=Mon,2=Tue,3=Wed...
+  const hour = now.getHours();
+
+  const openNow = day < 3 || (day === 3 && hour < 18);
+  const daysUntilWed = openNow ? (3 - day) : 0;
+
+  if (openNow) {
+    const label = day === 3 ? "today" : `in ${daysUntilWed} day${daysUntilWed === 1 ? "" : "s"}`;
+    banner.style.background = "#E6F4E8";
+    banner.style.color = "#2A7A38";
+    banner.textContent = `🟢 Orders are open — this week's window closes Wednesday at 6:00 PM (${label}).`;
+  } else {
+    banner.style.background = "#FBF0DD";
+    banner.style.color = "#B8781F";
+    banner.textContent = `🟡 This week's order window has closed — it reopens Monday for next week's restock.`;
+  }
+  banner.style.display = "block";
+}
   const body = document.getElementById("myOrdersBody");
   if (!body) return;
   if (currentMyOrders.length === 0) {
@@ -683,8 +815,13 @@ function renderMyOrders() {
     const when = o.createdAt?.toDate ? o.createdAt.toDate().toLocaleDateString() : "—";
     const status = o.status || "submitted";
     const canInvoice = status !== "submitted";
+    const deliveryLabel = DELIVERY_LABELS[o.deliveryOption] || "—";
+    const deliveryText = o.deliveryOption === "pickup" || !o.deliveryOption
+      ? deliveryLabel
+      : `${deliveryLabel} (KES ${o.deliveryCharge || 0})`;
     return `<tr>
       <td>${escapeHtml(itemsLabel)}</td>
+      <td>${escapeHtml(deliveryText)}</td>
       <td><span class="pill ${status}">${STATUS_LABELS[status] || status}</span></td>
       <td>${when}</td>
       <td>${canInvoice ? `<button class="btn-sm" data-invoice="${o.id}">Invoice</button>` : ""}</td>
@@ -740,6 +877,14 @@ function generateInvoice(order, shop) {
     y += 8;
   });
 
+  const deliveryCharge = Number(order.deliveryCharge) || 0;
+  if (deliveryCharge > 0) {
+    doc.text(DELIVERY_LABELS[order.deliveryOption] || "Delivery", 14, y);
+    doc.text(`KES ${deliveryCharge.toLocaleString()}`, 180, y);
+    grandTotal += deliveryCharge;
+    y += 8;
+  }
+
   y += 4;
   doc.line(14, y - 4, 196, y - 4);
   doc.setFont("helvetica", "bold");
@@ -793,8 +938,11 @@ function renderOrders() {
       const shopLabel = shop ? shop.shopName : o.shopId;
       const itemsLabel = (o.items || []).map(i => `${i.name} × ${i.quantity}`).join(", ");
       const when = o.createdAt?.toDate ? o.createdAt.toDate().toLocaleDateString() : "—";
+      const deliveryLabel = DELIVERY_LABELS[o.deliveryOption] || "—";
       return `<tr>
-        <td>${escapeHtml(shopLabel)}</td><td>${escapeHtml(itemsLabel)}</td><td>${when}</td>
+        <td>${escapeHtml(shopLabel)}</td><td>${escapeHtml(itemsLabel)}</td>
+        <td>${escapeHtml(deliveryLabel)}${o.deliveryCharge ? ` (KES ${o.deliveryCharge})` : ""}</td>
+        <td>${when}</td>
         <td><button class="btn-sm amber" data-approve="${o.id}">Approve</button></td>
       </tr>`;
     }).join("");
@@ -848,7 +996,12 @@ function renderOrders() {
         const order = allOrders.find(o => o.id === btn.dataset.advance);
         const nextIndex = ORDER_PIPELINE.indexOf(order.status) + 1;
         const nextStatus = ORDER_PIPELINE[nextIndex];
-        if (nextStatus) await updateDoc(doc(db, "orders", order.id), { status: nextStatus });
+        if (nextStatus) {
+          await updateDoc(doc(db, "orders", order.id), { status: nextStatus });
+          if (nextStatus === "ready_for_pickup") {
+            await notifyShop(order.shopId, "Your order is ready for pickup.", "order");
+          }
+        }
       });
     });
   }
@@ -917,11 +1070,16 @@ function renderCatalogueAdmin() {
       const buyPrice = prompt("Buy price (KES)", p.buyPrice || 0); if (buyPrice === null) return;
       const sellPrice = prompt("Recommended sell price (KES)", p.sellPrice || 0); if (sellPrice === null) return;
       const imageUrl = prompt("Image URL (optional)", p.imageUrl || ""); if (imageUrl === null) return;
+      const newBuy = Number(buyPrice) || 0;
+      const newSell = Number(sellPrice) || 0;
       await setDoc(doc(db, "catalogue", p.id), {
         name: name.trim(), category: category.trim(),
-        buyPrice: Number(buyPrice) || 0, sellPrice: Number(sellPrice) || 0,
+        buyPrice: newBuy, sellPrice: newSell,
         imageUrl: imageUrl.trim()
       }, { merge: true });
+      if (newBuy !== (Number(p.buyPrice) || 0) || newSell !== (Number(p.sellPrice) || 0)) {
+        await notifyAllShops(`Price changed for ${name.trim()}.`, "price");
+      }
     });
   });
   body.querySelectorAll("[data-catdelete]").forEach(btn => {
@@ -946,6 +1104,7 @@ document.getElementById("addCatalogueBtn")?.addEventListener("click", async () =
     buyPrice: Number(buyPrice) || 0, sellPrice: Number(sellPrice) || 0,
     imageUrl, createdAt: serverTimestamp()
   });
+  await notifyAllShops(`New product available: ${name}`, "product");
   document.getElementById("catName").value = "";
   document.getElementById("catCategory").value = "";
   document.getElementById("catBuyPrice").value = "";
