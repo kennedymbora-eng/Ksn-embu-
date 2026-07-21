@@ -303,6 +303,59 @@ tr:last-child td{border-bottom:none}
         <tbody id="shopsBody"><tr><td colspan="4" class="empty-state">No shops registered yet.</td></tr></tbody>
       </table>
     </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Best-selling products</h2></div>
+      <table>
+        <thead><tr><th>Product</th><th>Total units ordered</th><th>Orders</th></tr></thead>
+        <tbody id="bestSellersBody"><tr><td colspan="3" class="empty-state">No order history yet.</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Low stock across the network</h2></div>
+      <table>
+        <thead><tr><th>Product</th><th>Shops low</th><th>Shops out</th></tr></thead>
+        <tbody id="networkLowStockBody"><tr><td colspan="3" class="empty-state">No inventory data yet.</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Shop performance <span style="font-weight:400;color:var(--slate);font-size:.8rem;">(all-time)</span></h2>
+        <button class="btn-sm" id="exportPerformanceBtn">Copy as CSV</button>
+      </div>
+      <table>
+        <thead><tr><th>Shop</th><th>Orders placed</th><th>Total spent (KES)</th><th>Last order</th></tr></thead>
+        <tbody id="performanceBody"><tr><td colspan="4" class="empty-state">No order history yet.</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Suppliers</h2></div>
+      <div class="add-form" style="grid-template-columns: 1.5fr 1fr 1fr 1.5fr auto;">
+        <input type="text" id="supName" placeholder="Supplier name" />
+        <input type="text" id="supLocation" placeholder="Location (e.g. Nairobi CBD)" />
+        <input type="text" id="supPhone" placeholder="Phone" />
+        <input type="text" id="supCategories" placeholder="Categories (comma-separated)" />
+        <button class="btn-sm amber" id="addSupplierBtn">+ Add supplier</button>
+      </div>
+      <table>
+        <thead><tr><th>Supplier</th><th>Location</th><th>Phone</th><th>Categories</th><th></th></tr></thead>
+        <tbody id="suppliersBody"><tr><td colspan="5" class="empty-state">No suppliers added yet.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="reportModal" style="display:none;position:fixed;inset:0;background:rgba(15,27,45,0.55);z-index:50;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:12px;max-width:520px;width:100%;max-height:85vh;overflow-y:auto;padding:24px;">
+    <h2 style="font-size:1.1rem;margin:0 0 14px;">Shop performance — CSV</h2>
+    <pre id="reportText" style="white-space:pre-wrap;font-family:monospace;font-size:.8rem;background:var(--paper);border-radius:8px;padding:14px;margin:0 0 16px;line-height:1.5;"></pre>
+    <div style="display:flex;gap:10px;">
+      <button class="btn-sm amber" id="copyReportBtn" style="flex:1;padding:10px;">Copy</button>
+      <button class="btn-sm" id="closeReportBtn" style="flex:1;padding:10px;">Close</button>
+    </div>
   </div>
 </div>
 
@@ -315,7 +368,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, doc, setDoc, getDoc, addDoc, deleteDoc, updateDoc, collection,
-  onSnapshot, query, where, orderBy, serverTimestamp
+  onSnapshot, query, where, orderBy, serverTimestamp, arrayUnion, arrayRemove, collectionGroup
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ---- Firebase config (ksn-embu project) ----
@@ -454,6 +507,10 @@ let shopsById = {};
 let allOrders = [];
 let unsubShops = null;
 let unsubOrders = null;
+let allNetworkInventory = [];
+let unsubNetworkInventory = null;
+let currentSuppliers = [];
+let unsubSuppliers = null;
 
 const ORDER_PIPELINE = ["purchased", "in_transit", "ready_for_pickup", "collected"];
 const STATUS_LABELS = {
@@ -474,6 +531,8 @@ onAuthStateChanged(auth, async (user) => {
   if (unsubMyOrders) { unsubMyOrders(); unsubMyOrders = null; }
   if (unsubNotifs) { unsubNotifs(); unsubNotifs = null; }
   if (unsubDeliveryCharges) { unsubDeliveryCharges(); unsubDeliveryCharges = null; }
+  if (unsubNetworkInventory) { unsubNetworkInventory(); unsubNetworkInventory = null; }
+  if (unsubSuppliers) { unsubSuppliers(); unsubSuppliers = null; }
 
   if (user) {
     unsubCatalogue = onSnapshot(collection(db, "catalogue"), (snap) => {
@@ -497,12 +556,22 @@ onAuthStateChanged(auth, async (user) => {
         shopsById = Object.fromEntries(snap.docs.map(d => [d.id, { id: d.id, ...d.data() }]));
         renderShops();
         renderOrders();
+        renderAnalytics();
       });
       unsubOrders = onSnapshot(collection(db, "orders"), (snap) => {
         allOrders = snap.docs
           .map(d => ({ id: d.id, ...d.data() }))
           .sort((a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0));
         renderOrders();
+        renderAnalytics();
+      });
+      unsubNetworkInventory = onSnapshot(collectionGroup(db, "inventory"), (snap) => {
+        allNetworkInventory = snap.docs.map(d => d.data());
+        renderAnalytics();
+      });
+      unsubSuppliers = onSnapshot(collection(db, "suppliers"), (snap) => {
+        currentSuppliers = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.name.localeCompare(b.name));
+        renderSuppliers();
       });
       showView("admin");
       return;
@@ -553,8 +622,14 @@ onAuthStateChanged(auth, async (user) => {
 function renderCatalogueSelect() {
   const select = document.getElementById("catalogueSelect");
   const current = select.value;
+  const favorites = (currentShop && currentShop.favorites) || [];
+  const sorted = [...currentCatalogue].sort((a, b) => {
+    const aFav = favorites.includes(a.id), bFav = favorites.includes(b.id);
+    if (aFav !== bFav) return aFav ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
   select.innerHTML = `<option value="">Select a product to stock…</option>` +
-    currentCatalogue.map(c => `<option value="${c.id}">${escapeHtml(c.name)}${c.category ? " — " + escapeHtml(c.category) : ""}</option>`).join("");
+    sorted.map(c => `<option value="${c.id}">${favorites.includes(c.id) ? "⭐ " : ""}${escapeHtml(c.name)}${c.category ? " — " + escapeHtml(c.category) : ""}</option>`).join("");
   if (currentCatalogue.some(c => c.id === current)) select.value = current;
 }
 
@@ -606,6 +681,8 @@ function renderInventory() {
     const thumb = p.imageUrl
       ? `<img src="${escapeHtml(p.imageUrl)}" style="width:36px;height:36px;object-fit:cover;border-radius:6px;" onerror="this.style.display='none'" />`
       : `<div style="width:36px;height:36px;border-radius:6px;background:#EEEAE0;"></div>`;
+    const favorites = (currentShop && currentShop.favorites) || [];
+    const isFav = p.catalogueId && favorites.includes(p.catalogueId);
     return `<tr>
       <td>${thumb}</td>
       <td>${escapeHtml(p.name)}</td>
@@ -614,12 +691,31 @@ function renderInventory() {
       <td>${profit ? "KES " + profit : "—"}</td>
       <td><span class="pill ${pillClass}">${pillText}</span></td>
       <td>
+        <button class="btn-sm" data-fav="${p.id}" title="Favorite">${isFav ? "⭐" : "☆"}</button>
         <button class="btn-sm" data-edit="${p.id}">Edit</button>
         <button class="btn-sm" data-restock="${p.id}">+ Restock</button>
         <button class="btn-sm" data-delete="${p.id}">Delete</button>
       </td>
     </tr>`;
   }).join("");
+
+  body.querySelectorAll("[data-fav]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const product = currentProducts.find(p => p.id === btn.dataset.fav);
+      if (!product.catalogueId) return alert("This product isn't linked to the catalogue, so it can't be favorited.");
+      const favorites = (currentShop && currentShop.favorites) || [];
+      const isFav = favorites.includes(product.catalogueId);
+      await updateDoc(doc(db, "shops", currentShopId), {
+        favorites: isFav ? arrayRemove(product.catalogueId) : arrayUnion(product.catalogueId)
+      });
+      if (!currentShop) currentShop = {};
+      currentShop.favorites = isFav
+        ? favorites.filter(id => id !== product.catalogueId)
+        : [...favorites, product.catalogueId];
+      renderInventory();
+      renderCatalogueSelect();
+    });
+  });
 
   body.querySelectorAll("[data-edit]").forEach(btn => {
     btn.addEventListener("click", async () => {
@@ -804,6 +900,8 @@ function renderDeadlineBanner() {
   }
   banner.style.display = "block";
 }
+
+function renderMyOrders() {
   const body = document.getElementById("myOrdersBody");
   if (!body) return;
   if (currentMyOrders.length === 0) {
@@ -824,7 +922,10 @@ function renderDeadlineBanner() {
       <td>${escapeHtml(deliveryText)}</td>
       <td><span class="pill ${status}">${STATUS_LABELS[status] || status}</span></td>
       <td>${when}</td>
-      <td>${canInvoice ? `<button class="btn-sm" data-invoice="${o.id}">Invoice</button>` : ""}</td>
+      <td>
+        ${canInvoice ? `<button class="btn-sm" data-invoice="${o.id}">Invoice</button>` : ""}
+        <button class="btn-sm" data-reorder="${o.id}">Reorder</button>
+      </td>
     </tr>`;
   }).join("");
 
@@ -832,6 +933,18 @@ function renderDeadlineBanner() {
     btn.addEventListener("click", () => {
       const order = currentMyOrders.find(o => o.id === btn.dataset.invoice);
       generateInvoice(order, currentShop);
+    });
+  });
+  body.querySelectorAll("[data-reorder]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const order = currentMyOrders.find(o => o.id === btn.dataset.reorder);
+      if (!confirm(`Add ${(order.items || []).length} item(s) from this order back to your restock list?`)) return;
+      await Promise.all((order.items || []).map(i =>
+        addDoc(collection(db, "shops", currentShopId, "restockList"), {
+          productId: i.productId, name: i.name, quantity: i.quantity, addedAt: serverTimestamp()
+        })
+      ));
+      alert("Items added to your restock list.");
     });
   });
 }
@@ -1013,6 +1126,160 @@ document.getElementById("markPurchasedBtn").addEventListener("click", async () =
   if (!confirm(`Mark all ${approved.length} approved order(s) as purchased?`)) return;
   await Promise.all(approved.map(o => updateDoc(doc(db, "orders", o.id), { status: "purchased" })));
   alert("Orders marked as purchased.");
+});
+
+// ---- Phase 4: Analytics ----
+function renderAnalytics() {
+  renderBestSellers();
+  renderNetworkLowStock();
+  renderShopPerformance();
+}
+
+function renderBestSellers() {
+  const body = document.getElementById("bestSellersBody");
+  if (!body) return;
+  const totals = {};
+  allOrders.forEach(o => {
+    (o.items || []).forEach(item => {
+      const key = item.name.trim().toLowerCase();
+      if (!totals[key]) totals[key] = { name: item.name, units: 0, orders: 0 };
+      totals[key].units += Number(item.quantity) || 0;
+      totals[key].orders += 1;
+    });
+  });
+  const sorted = Object.values(totals).sort((a, b) => b.units - a.units).slice(0, 10);
+  if (sorted.length === 0) {
+    body.innerHTML = `<tr><td colspan="3" class="empty-state">No order history yet.</td></tr>`;
+    return;
+  }
+  body.innerHTML = sorted.map(t => `<tr>
+    <td>${escapeHtml(t.name)}</td><td><strong>${t.units}</strong></td><td>${t.orders}</td>
+  </tr>`).join("");
+}
+
+function renderNetworkLowStock() {
+  const body = document.getElementById("networkLowStockBody");
+  if (!body) return;
+  const counts = {};
+  allNetworkInventory.forEach(item => {
+    const status = stockStatus(item.stock, item.minStock);
+    if (status === "ok") return;
+    const key = item.name.trim().toLowerCase();
+    if (!counts[key]) counts[key] = { name: item.name, low: 0, out: 0 };
+    if (status === "low") counts[key].low += 1;
+    if (status === "out") counts[key].out += 1;
+  });
+  const sorted = Object.values(counts).sort((a, b) => (b.low + b.out) - (a.low + a.out));
+  if (sorted.length === 0) {
+    body.innerHTML = `<tr><td colspan="3" class="empty-state">No shops currently reporting low stock.</td></tr>`;
+    return;
+  }
+  body.innerHTML = sorted.map(c => `<tr>
+    <td>${escapeHtml(c.name)}</td><td>${c.low || "—"}</td><td>${c.out || "—"}</td>
+  </tr>`).join("");
+}
+
+function computeShopPerformance() {
+  const perf = {};
+  allOrders.forEach(o => {
+    if (!perf[o.shopId]) perf[o.shopId] = { orders: 0, spent: 0, lastOrder: null };
+    perf[o.shopId].orders += 1;
+    const itemsTotal = (o.items || []).reduce((sum, i) => sum + (Number(i.buyPrice) || 0) * (Number(i.quantity) || 0), 0);
+    perf[o.shopId].spent += itemsTotal + (Number(o.deliveryCharge) || 0);
+    const ts = o.createdAt?.toMillis?.() || 0;
+    if (!perf[o.shopId].lastOrder || ts > perf[o.shopId].lastOrder) perf[o.shopId].lastOrder = ts;
+  });
+  return perf;
+}
+
+function renderShopPerformance() {
+  const body = document.getElementById("performanceBody");
+  if (!body) return;
+  const perf = computeShopPerformance();
+  const rows = Object.keys(perf).map(shopId => {
+    const shop = shopsById[shopId];
+    return { shopName: shop ? shop.shopName : shopId, ...perf[shopId] };
+  }).sort((a, b) => b.spent - a.spent);
+
+  if (rows.length === 0) {
+    body.innerHTML = `<tr><td colspan="4" class="empty-state">No order history yet.</td></tr>`;
+    return;
+  }
+  body.innerHTML = rows.map(r => `<tr>
+    <td>${escapeHtml(r.shopName)}</td>
+    <td>${r.orders}</td>
+    <td>${r.spent.toLocaleString()}</td>
+    <td>${r.lastOrder ? new Date(r.lastOrder).toLocaleDateString() : "—"}</td>
+  </tr>`).join("");
+}
+
+document.getElementById("exportPerformanceBtn")?.addEventListener("click", () => {
+  const perf = computeShopPerformance();
+  const rows = Object.keys(perf).map(shopId => {
+    const shop = shopsById[shopId];
+    return { shopName: shop ? shop.shopName : shopId, ...perf[shopId] };
+  }).sort((a, b) => b.spent - a.spent);
+
+  const csvLines = ["Shop,Orders placed,Total spent (KES),Last order"];
+  rows.forEach(r => {
+    const lastOrder = r.lastOrder ? new Date(r.lastOrder).toLocaleDateString() : "";
+    csvLines.push(`"${r.shopName}",${r.orders},${r.spent},"${lastOrder}"`);
+  });
+  const csv = csvLines.join("\n");
+
+  document.getElementById("reportText").textContent = csv;
+  document.getElementById("reportModal").style.display = "flex";
+  document.getElementById("copyReportBtn").onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(csv);
+      const btn = document.getElementById("copyReportBtn");
+      const original = btn.textContent;
+      btn.textContent = "Copied!";
+      setTimeout(() => { btn.textContent = original; }, 1500);
+    } catch (err) {
+      alert("Could not copy automatically — please select and copy the text manually.");
+    }
+  };
+  document.getElementById("closeReportBtn").onclick = () => {
+    document.getElementById("reportModal").style.display = "none";
+  };
+});
+
+// ---- Phase 5: Supplier management ----
+function renderSuppliers() {
+  const body = document.getElementById("suppliersBody");
+  if (!body) return;
+  if (currentSuppliers.length === 0) {
+    body.innerHTML = `<tr><td colspan="5" class="empty-state">No suppliers added yet.</td></tr>`;
+    return;
+  }
+  body.innerHTML = currentSuppliers.map(s => `<tr>
+    <td>${escapeHtml(s.name)}</td>
+    <td>${escapeHtml(s.location || "—")}</td>
+    <td>${escapeHtml(s.phone || "—")}</td>
+    <td>${escapeHtml((s.categories || []).join(", ") || "—")}</td>
+    <td><button class="btn-sm" data-supdelete="${s.id}">Delete</button></td>
+  </tr>`).join("");
+
+  body.querySelectorAll("[data-supdelete]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      if (confirm("Remove this supplier?")) await deleteDoc(doc(db, "suppliers", btn.dataset.supdelete));
+    });
+  });
+}
+
+document.getElementById("addSupplierBtn")?.addEventListener("click", async () => {
+  const name = document.getElementById("supName").value.trim();
+  const location = document.getElementById("supLocation").value.trim();
+  const phone = document.getElementById("supPhone").value.trim();
+  const categories = document.getElementById("supCategories").value.split(",").map(c => c.trim()).filter(Boolean);
+  if (!name) return alert("Supplier name is required.");
+
+  await addDoc(collection(db, "suppliers"), { name, location, phone, categories, createdAt: serverTimestamp() });
+  document.getElementById("supName").value = "";
+  document.getElementById("supLocation").value = "";
+  document.getElementById("supPhone").value = "";
+  document.getElementById("supCategories").value = "";
 });
 
 // ---- Product catalogue (admin) ----
