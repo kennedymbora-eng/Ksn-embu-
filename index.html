@@ -204,8 +204,8 @@ tr:last-child td{border-bottom:none}
     <div class="panel">
       <div class="panel-head"><h2>My orders</h2></div>
       <table>
-        <thead><tr><th>Items</th><th>Status</th><th>Submitted</th></tr></thead>
-        <tbody id="myOrdersBody"><tr><td colspan="3" class="empty-state">No orders submitted yet.</td></tr></tbody>
+        <thead><tr><th>Items</th><th>Status</th><th>Submitted</th><th></th></tr></thead>
+        <tbody id="myOrdersBody"><tr><td colspan="4" class="empty-state">No orders submitted yet.</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -279,6 +279,7 @@ tr:last-child td{border-bottom:none}
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
@@ -410,6 +411,7 @@ let currentShopId = null;
 let currentProducts = [];
 let currentRestockItems = [];
 let currentMyOrders = [];
+let currentShop = null;
 let unsubInventory = null;
 let unsubRestock = null;
 let unsubMyOrders = null;
@@ -464,8 +466,8 @@ onAuthStateChanged(auth, async (user) => {
 
     currentShopId = user.uid;
     const shopSnap = await getDoc(doc(db, "shops", currentShopId));
-    const shop = shopSnap.data();
-    document.getElementById("shopLabel").textContent = shop ? `${shop.shopName} · ${shop.shopCode}` : user.email;
+    currentShop = shopSnap.data();
+    document.getElementById("shopLabel").textContent = currentShop ? `${currentShop.shopName} · ${currentShop.shopCode}` : user.email;
 
     const invQuery = query(collection(db, "shops", currentShopId, "inventory"), orderBy("name"));
     unsubInventory = onSnapshot(invQuery, (snap) => {
@@ -649,9 +651,19 @@ document.getElementById("submitOrderBtn").addEventListener("click", async () => 
   if (currentRestockItems.length === 0) return alert("Your restock list is empty.");
   if (!confirm(`Submit order for ${currentRestockItems.length} item(s)?`)) return;
 
+  const itemsWithPrices = currentRestockItems.map(i => {
+    const product = currentProducts.find(p => p.id === i.productId);
+    return {
+      productId: i.productId,
+      name: i.name,
+      quantity: i.quantity,
+      buyPrice: product ? Number(product.buyPrice) || 0 : 0
+    };
+  });
+
   await addDoc(collection(db, "orders"), {
     shopId: currentShopId,
-    items: currentRestockItems.map(i => ({ productId: i.productId, name: i.name, quantity: i.quantity })),
+    items: itemsWithPrices,
     status: "submitted",
     createdAt: serverTimestamp()
   });
@@ -670,12 +682,70 @@ function renderMyOrders() {
     const itemsLabel = (o.items || []).map(i => `${i.name} × ${i.quantity}`).join(", ");
     const when = o.createdAt?.toDate ? o.createdAt.toDate().toLocaleDateString() : "—";
     const status = o.status || "submitted";
+    const canInvoice = status !== "submitted";
     return `<tr>
       <td>${escapeHtml(itemsLabel)}</td>
       <td><span class="pill ${status}">${STATUS_LABELS[status] || status}</span></td>
       <td>${when}</td>
+      <td>${canInvoice ? `<button class="btn-sm" data-invoice="${o.id}">Invoice</button>` : ""}</td>
     </tr>`;
   }).join("");
+
+  body.querySelectorAll("[data-invoice]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const order = currentMyOrders.find(o => o.id === btn.dataset.invoice);
+      generateInvoice(order, currentShop);
+    });
+  });
+}
+
+function generateInvoice(order, shop) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const items = order.items || [];
+  const when = order.createdAt?.toDate ? order.createdAt.toDate().toLocaleDateString() : "—";
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.text("Krystal Supply Network", 14, 20);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.text("Invoice", 14, 28);
+
+  doc.setFontSize(10);
+  doc.text(`Shop: ${shop ? shop.shopName : ""}`, 14, 40);
+  doc.text(`Shop code: ${shop ? shop.shopCode : ""}`, 14, 46);
+  doc.text(`Order date: ${when}`, 14, 52);
+  doc.text(`Status: ${STATUS_LABELS[order.status] || order.status}`, 14, 58);
+
+  let y = 72;
+  doc.setFont("helvetica", "bold");
+  doc.text("Product", 14, y);
+  doc.text("Qty", 120, y);
+  doc.text("Unit price", 145, y);
+  doc.text("Total", 180, y);
+  doc.setFont("helvetica", "normal");
+  y += 6;
+  doc.line(14, y - 4, 196, y - 4);
+
+  let grandTotal = 0;
+  items.forEach(item => {
+    const unitPrice = Number(item.buyPrice) || 0;
+    const lineTotal = unitPrice * (Number(item.quantity) || 0);
+    grandTotal += lineTotal;
+    doc.text(String(item.name), 14, y);
+    doc.text(String(item.quantity), 120, y);
+    doc.text(`KES ${unitPrice.toLocaleString()}`, 145, y);
+    doc.text(`KES ${lineTotal.toLocaleString()}`, 180, y);
+    y += 8;
+  });
+
+  y += 4;
+  doc.line(14, y - 4, 196, y - 4);
+  doc.setFont("helvetica", "bold");
+  doc.text(`Grand total: KES ${grandTotal.toLocaleString()}`, 140, y + 4);
+
+  doc.save(`KSN-invoice-${order.id.slice(0, 8)}.pdf`);
 }
 
 // ---- Admin rendering ----
